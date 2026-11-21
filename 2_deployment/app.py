@@ -1,5 +1,3 @@
-import time
-
 import gradio as gr
 from ultralytics import YOLO
 
@@ -9,13 +7,6 @@ BEATS = {"rock": "scissors", "paper": "rock", "scissors": "paper"}
 COLORS = {"rock": "#F9A8D4", "paper": "#A5B4FC", "scissors": "#86EFAC"}
 GAME_MODE, ADVANCED = "Game Mode", "Advanced Settings"
 GAME_CONF = 0.5  # fixed confidence in Game Mode
-
-# Live round: "Rock... Paper... Scissors..." (1 s each), then "Shoot!"
-COUNTDOWN = ["Rock...", "Paper...", "Scissors..."]
-SHOOT_WINDOW = 2.0   # seconds after "Shoot!" to wait for both hands
-STREAM_EVERY = 0.2   # seconds between webcam frames sent to the model
-IDLE = {"phase": "idle", "t": 0.0}
-GR6 = int(gr.__version__.split(".")[0]) >= 6  # Gradio 6 takes css in launch(), older versions in Blocks()
 
 
 # ---------- icons (solid fills, so they also render when a page is hidden) ----------
@@ -67,7 +58,7 @@ HERO = f"""
 FEATURES = f"""
 <div class="features">
   <div class="feat"><div class="tile">{line_icon('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>')}</div>
-    <div><b>Real-time Detection</b><span>Detects hand gestures live from your webcam</span></div></div>
+    <div><b>Real-time Detection</b><span>Detects hand gestures using YOLOv8</span></div></div>
   <div class="feat"><div class="tile">{line_icon('<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>')}</div>
     <div><b>Two Players</b><span>Play with a friend using one camera</span></div></div>
   <div class="feat"><div class="tile">{line_icon('<path d="M5 20V12M12 20V5M19 20V9"/>')}</div>
@@ -80,9 +71,9 @@ HOW = """
   <h1 style="font-size:44px">How It <span class="grad">Works</span></h1>
   <p class="sub">Three simple steps</p>
   <div class="steps">
-    <div class="card"><div class="num">1</div><b>Start the camera</b><span>Both players stand in front of one camera: Player 1 on the left, Player 2 on the right.</span></div>
-    <div class="card"><div class="num">2</div><b>Start a round</b><span>Rock... Paper... Scissors... Shoot! YOLOv8 detects your hands live.</span></div>
-    <div class="card"><div class="num">3</div><b>See who wins</b><span>On "Shoot!" the AI judges: rock beats scissors, scissors beats paper, paper beats rock.</span></div>
+    <div class="card"><div class="num">1</div><b>Show your hands</b><span>Take a photo or upload one with two hands: Player 1 on the left, Player 2 on the right.</span></div>
+    <div class="card"><div class="num">2</div><b>AI detects</b><span>YOLOv8 finds each hand and tells rock, paper or scissors.</span></div>
+    <div class="card"><div class="num">3</div><b>See who wins</b><span>Rock beats scissors, scissors beats paper, paper beats rock.</span></div>
   </div>
 </div>
 """
@@ -147,7 +138,7 @@ button.primary {background:linear-gradient(90deg,#7C3AED,#A855F7) !important; co
 /* cards */
 .card {background:rgba(30,20,80,.55); border:1px solid rgba(167,139,250,.3); border-radius:18px; padding:16px; text-align:center;}
 .pname {font-size:13px; color:#EDE9FE;} .gesture {font-size:24px; font-weight:800; margin-top:2px;}
-.result {font-size:24px; font-weight:800; color:#C4B5FD;} .result.big {font-size:44px; color:#fff;} .small {font-size:13px; color:#B4AEDD;}
+.result {font-size:24px; font-weight:800; color:#C4B5FD;} .small {font-size:13px; color:#B4AEDD;}
 .score {display:flex; gap:12px; justify-content:center; font-size:32px; font-weight:800;}
 .steps {display:flex; gap:16px; margin-top:24px; flex-wrap:wrap;}
 .steps .card {flex:1; min-width:200px; display:flex; flex-direction:column; gap:8px;} .steps .card span {color:#B4AEDD; font-size:14px;}
@@ -199,57 +190,28 @@ def score_html(score):
             f'<span style="color:#A5B4FC">{score[1]}</span></div></div>')
 
 
-def result_html(title, sub="", big=False):
-    cls = "result big" if big else "result"
-    return f'<div class="card"><div class="{cls}">{title}</div><div class="small">{sub}</div></div>'
+def result_html(title, sub=""):
+    return f'<div class="card"><div class="result">{title}</div><div class="small">{sub}</div></div>'
 
 
-READY = result_html("Ready!", "Start the camera, then press Start Round.")
-
-
-def live(frame, mode, conf, rnd, score):
-    """Runs on every webcam frame: live detection + the round countdown.
-
-    Outputs: out_img, p1, p2, res, rnd, score, score_box.
-    State outputs use gr.skip() unless they change, so a frame being processed
-    never overwrites a Start Round / Reset click that happened meanwhile.
-    """
-    if frame is None:
-        return (gr.skip(),) * 7
+def play(img, mode, conf, score):
     conf = conf if mode == ADVANCED else GAME_CONF  # slider only counts in Advanced Settings
-    annotated, hands = detect_players(frame, conf)
-    p1 = card("Player 1", hands[0] if hands else None)
-    p2 = card("Player 2", hands[1] if len(hands) > 1 else None)
-    keep = gr.skip()
-
-    if rnd["phase"] != "count":  # no round running: just show live detection
-        return annotated, p1, p2, keep, keep, keep, keep
-
-    elapsed = time.time() - rnd["t"]
-    if elapsed < len(COUNTDOWN):
-        return annotated, p1, p2, result_html(COUNTDOWN[int(elapsed)], "Get ready!", big=True), keep, keep, keep
-
-    if len(hands) == 2:  # Shoot! -> judge this frame
-        winner, title, sub = judge(hands[0][0], hands[1][0])
-        score = list(score)
-        if winner:
-            score[winner - 1] += 1
-        res = result_html(title, sub + " · press Start Round to play again")
-        return annotated, p1, p2, res, dict(IDLE), score, score_html(score)
-
-    if elapsed < len(COUNTDOWN) + SHOOT_WINDOW:
-        return annotated, p1, p2, result_html("Shoot!", "Show both hands to the camera", big=True), keep, keep, keep
-
-    msg = "Both hands weren't detected. Try better lighting, or lower the confidence in Settings."
-    return annotated, p1, p2, result_html("Missed!", msg), dict(IDLE), keep, keep
-
-
-def start_round():
-    return {"phase": "count", "t": time.time()}, result_html(COUNTDOWN[0], "Get ready!", big=True)
+    if img is None:
+        return None, card("Player 1", None), card("Player 2", None), result_html("Add an image first"), score, score_html(score)
+    annotated, hands = detect_players(img, conf)
+    if len(hands) < 2:
+        msg = "Show both hands in the picture" if hands else "No hands detected"
+        p1 = card("Player 1", hands[0] if hands else None)
+        return annotated, p1, card("Player 2", None), result_html(msg, "Try better lighting, or lower the confidence in Settings."), score, score_html(score)
+    winner, title, sub = judge(hands[0][0], hands[1][0])
+    score = list(score)
+    if winner:
+        score[winner - 1] += 1
+    return annotated, card("Player 1", hands[0]), card("Player 2", hands[1]), result_html(title, sub), score, score_html(score)
 
 
 def reset():
-    return card("Player 1", None), card("Player 2", None), READY, dict(IDLE), [0, 0], score_html([0, 0])
+    return None, card("Player 1", None), card("Player 2", None), result_html("Ready!"), [0, 0], score_html([0, 0])
 
 
 def show(page):
@@ -262,7 +224,7 @@ def toggle_slider(mode):
 
 
 # ---------- UI ----------
-with gr.Blocks(title="RPS Vision - Rock Paper Scissors", **({} if GR6 else {"css": CSS})) as demo:
+with gr.Blocks(css=CSS, title="RPS Vision - Rock Paper Scissors") as demo:
     # Top navigation (all pages)
     with gr.Row(elem_id="nav"):
         gr.HTML(NAV_BRAND)
@@ -292,25 +254,23 @@ with gr.Blocks(title="RPS Vision - Rock Paper Scissors", **({} if GR6 else {"css
     with gr.Column(visible=False) as game:
         with gr.Row():
             gr.HTML('<div id="title">Rock Paper <span class="grad">Scissors</span></div>'
-                    '<div id="sub">Start the camera · Press Start Round · Show your hand on "Shoot!"</div>')
+                    '<div id="sub">Show your hand · Let AI detect · See who wins!</div>')
             settings_btn = gr.Button("Settings", elem_classes="ghost", scale=0, min_width=140)
         score = gr.State([0, 0])
-        rnd = gr.State(dict(IDLE))
         with gr.Row():
             with gr.Column(scale=3):
-                inp = gr.Image(sources=["webcam"], type="numpy", streaming=True,
-                               label="Live Camera (Player 1 = left, Player 2 = right)")
+                inp = gr.Image(sources=["webcam", "upload"], type="numpy", label="Camera / Upload (Player 1 = left, Player 2 = right)")
                 with gr.Row():
-                    go = gr.Button("Start Round", variant="primary")
+                    go = gr.Button("Play", variant="primary")
                     again = gr.Button("Reset Game")
             with gr.Column(scale=3):
-                out_img = gr.Image(label="Live Detection", interactive=False)
+                out_img = gr.Image(label="Detection", interactive=False)
                 with gr.Row():
                     p1 = gr.HTML(card("Player 1", None))
                     p2 = gr.HTML(card("Player 2", None))
             with gr.Column(scale=2):
                 score_box = gr.HTML(score_html([0, 0]))
-                res = gr.HTML(READY)
+                res = gr.HTML(result_html("Ready!"))
 
     # Settings drawer (hidden until the Settings button is pressed)
     with gr.Column(visible=False, elem_id="drawer") as drawer:
@@ -333,10 +293,8 @@ with gr.Blocks(title="RPS Vision - Rock Paper Scissors", **({} if GR6 else {"css
     close_btn.click(lambda: gr.update(visible=False), None, drawer)
     mode.change(toggle_slider, mode, conf)
 
-    inp.stream(live, [inp, mode, conf, rnd, score], [out_img, p1, p2, res, rnd, score, score_box],
-               stream_every=STREAM_EVERY, show_progress="hidden")
-    go.click(start_round, None, [rnd, res], show_progress="hidden")
-    again.click(reset, None, [p1, p2, res, rnd, score, score_box], show_progress="hidden")
+    go.click(play, [inp, mode, conf, score], [out_img, p1, p2, res, score, score_box])
+    again.click(reset, None, [out_img, p1, p2, res, score, score_box])
 
 if __name__ == "__main__":
-    demo.launch(**({"css": CSS} if GR6 else {}))
+    demo.launch() ايش يسوي الموقع؟
