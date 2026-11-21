@@ -10,10 +10,9 @@ rock-paper-scissors-*/
 *.zip
 
 # Outputs from predict.py and the app
-predictions/
+/predictions/
 flagged/
 .gradio/
-*.mp4
 
 # Base weights downloaded by ultralytics (keep weights/best.pt)
 yolov8*.pt
