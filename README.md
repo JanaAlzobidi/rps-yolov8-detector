@@ -156,9 +156,3 @@ The code and instructions to run it are in [`2_deployment/`](2_deployment/).
 - **Small evaluation sets.** 27 validation and 13 test photos are too few to rank experiments that are close to each other.
 - **Photos from the same session.** Some validation and test photos were taken right after a training photo, in the same place with the same people, but with a different gesture. They are not duplicates, but the scores may be a little better than in a completely new room. That is why we also test on new photos in [`3_evaluation/`](3_evaluation/).
 - **Side views of paper.** The most common mistake. More photos of open hands from the side would be the most useful next step.
-
-## How to contribute
-
-1. Work only inside **your own folder**, so uploads do not overwrite each other.
-2. Upload on GitHub: open your folder, then **Add file > Upload files**, and write a short message saying what you added.
-3. **Never upload a Roboflow API key.** In the notebook, use `api_key=getpass("Roboflow API key: ")` instead of writing the key.
