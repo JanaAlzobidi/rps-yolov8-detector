@@ -1,0 +1,9 @@
+experiment,model,imgsz,batch,optimizer,lr0,mosaic,epochs_run,train_min,size_mb,inference_ms,val_precision,val_recall,val_mAP50,val_mAP50-95,test_mAP50,test_mAP50-95
+s_base,yolov8s,640,16,auto,auto,1.0,80,8.3,22.5,9.7,0.952,0.852,0.973,0.868,0.882,0.826
+s_adamw_lr0.0005,yolov8s,640,16,AdamW,0.0005,1.0,54,5.3,22.5,9.7,0.931,0.882,0.951,0.859,0.946,0.888
+n_base,yolov8n,640,16,auto,auto,1.0,80,6.2,6.5,5.2,0.901,0.909,0.946,0.842,0.929,0.896
+s_sgd_lr0.01,yolov8s,640,16,SGD,0.01,1.0,65,5.6,22.5,9.8,0.945,0.935,0.97,0.839,0.891,0.783
+s_img416,yolov8s,416,16,auto,auto,1.0,80,6.1,22.5,6.9,0.948,0.832,0.946,0.836,0.948,0.901
+s_batch8,yolov8s,640,8,auto,auto,1.0,80,10.8,22.5,10.5,0.984,0.879,0.943,0.83,0.971,0.837
+s_no_mosaic,yolov8s,640,16,auto,auto,0.0,80,8.2,22.5,10.3,0.953,0.899,0.925,0.819,0.934,0.784
+m_base,yolov8m,640,16,auto,auto,1.0,80,22.5,52.0,24.2,0.954,0.873,0.951,0.742,0.841,0.737
