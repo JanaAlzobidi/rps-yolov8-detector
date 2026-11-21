@@ -1,25 +1,21 @@
-# 2. Deployment
+# 2_deployment
 
-**Owner:** Rawan
+Gradio app for the Rock Paper Scissors detector (two players, one image, the model decides the winner).
 
-Uses the model from [`1_training/weights/best.pt`](../1_training/).
+## Contents
+- `app.py` - the Gradio app with home, how it works, about and game pages plus a settings menu (loads `best.pt`, detects 2 hands, judges the winner, keeps score)
+- `best.pt` - trained YOLOv8 weights (classes: paper, rock, scissors)
+- `requirements.txt` - dependencies
+- `screenshot.png` - the app running with a prediction
 
-## What to upload here
+## Run locally
+```
+pip install -r requirements.txt
+python app.py
+```
 
-- [ ] The app code (for example `app.py`), and any helper files it needs.
-- [ ] `requirements.txt` with the libraries the app needs.
-- [ ] A screenshot of the app working, and a short screen recording if possible.
-- [ ] A link, if the app is hosted. A `gradio.live` link expires, so only add a link from a permanent host such as Hugging Face Spaces.
-- [ ] This README, filled in below.
-
-## Features
-
-*What the app does: image upload, webcam, video, who wins.*
-
-## How to run
-
-*The commands to install and start the app.*
-
-## Screenshot
-
-*Add a screenshot here.*
+## How it works
+1. The image goes through YOLOv8.
+2. **Game Mode** (default) uses a fixed confidence of 0.5. **Advanced Settings** (side menu: Settings button on the game page) shows a slider (0.1 to 0.9) to change it.
+3. The 2 most confident detections are kept and sorted left to right: left = Player 1, right = Player 2.
+4. Rock beats scissors, scissors beats paper, paper beats rock. Same gesture = tie.
