@@ -1,6 +1,6 @@
 # 3. Testing and evaluation
 
-**Owner:** Member 4
+**Owner:** Hassan
 
 Uses the model from [`1_training/weights/best.pt`](../1_training/).
 

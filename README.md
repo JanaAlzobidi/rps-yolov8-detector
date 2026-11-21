@@ -13,7 +13,7 @@ The project covers the full object detection pipeline: collecting photos, annota
 | Jana | Repository, project README | this page | 
 | Raghad | Training: notebook, best model | [`1_training/`](1_training/) |
 | Rawan | Deployment: Gradio app | [`2_deployment/`](2_deployment/) | 
-| Member 4 | Testing and evaluation on new images | [`3_evaluation/`](3_evaluation/) |
+| Hassan | Testing and evaluation on new images | [`3_evaluation/`](3_evaluation/) |
 
 ## Repository structure
 
