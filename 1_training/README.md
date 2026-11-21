@@ -24,8 +24,8 @@ The notebook asks for the Roboflow API key when it runs (`getpass`), so no key i
 | Valid | 27 | 2 | 32 labeled objects |
 | Test | 13 | 0 | 17 labeled objects |
 
-- **Preprocessing:** TODO: copy from the Roboflow version page (for example: Auto-Orient, Resize to 640×640)
-- **Augmentation (train set only):** TODO: copy from the Roboflow version page (for example: horizontal flip, brightness ±15%, blur up to 1px, 3× output)
+- **Preprocessing:** Auto-Orient: Applied, Resize: Fit (black edges) in 640x640
+- **Augmentation (train set only):** Flip: Horizontal, Crop: 0% Minimum Zoom, 25% Maximum Zoom, Rotation: Between -15° and +15°, Brightness: Between -25% and +25%, Exposure: Between -10% and +10%, Blur: Up to 1px, Motion Blur: Length 10px, Angle: 0°, Frames: 1
 
 ## Experiments
 
